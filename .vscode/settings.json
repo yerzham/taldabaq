@@ -3,7 +3,8 @@
     "./taldawasm/Cargo.toml",
     "./taldawasm/http_wrapper/Cargo.toml",
     "./taldawasm/structs/Cargo.toml",
-    "./taldawasm/examples/echo/Cargo.toml",
+    "./taldawasm/examples/http_endpoint/Cargo.toml",
+    "./taldawasm/examples/http_server/Cargo.toml",
     "./taldaframe/Cargo.toml",
   ]
 }
