@@ -51,13 +51,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "http-endpoint"
-version = "0.1.0"
-dependencies = [
- "wit-bindgen",
-]
-
-[[package]]
 name = "http-endpoint-macro"
 version = "0.1.0"
 dependencies = [
@@ -121,22 +114,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 
 [[package]]
-name = "mqtt-endpoint"
+name = "mqtt-endpoint-example"
 version = "0.1.0"
 dependencies = [
+ "taldawasm",
  "wit-bindgen",
-]
-
-[[package]]
-name = "mqtt-endpoint-macro"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "proc-macro2",
- "quote",
- "syn",
- "wit-bindgen-rust",
- "wit-parser",
 ]
 
 [[package]]

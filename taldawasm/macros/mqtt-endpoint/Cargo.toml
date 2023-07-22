@@ -1,5 +1,5 @@
 [package]
-name = "http-endpoint-macro"
+name = "mqtt-endpoint-macro"
 version = { workspace = true }
 authors = { workspace = true }
 edition = { workspace = true }

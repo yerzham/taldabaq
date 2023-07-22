@@ -1,11 +1,12 @@
 
-use taldawasm::http::http_endpoint;
+use taldawasm::http::http_endpoint::handler;
+use taldawit::http::http_endpoint_types::{Request, Response, Error}; // FIXME: ghost module
 
-#[http_endpoint::handler]
-fn handler(_request: Request) -> Result<Response, Error> {
+#[handler]
+fn handler(request: Request) -> Result<Response, Error> {
     Ok(Response {
         status_code: 200,
-        body: None,
+        body: request.body,
         headers: None
     })
 }

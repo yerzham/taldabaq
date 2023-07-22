@@ -1,9 +1,8 @@
 {
   "rust-analyzer.linkedProjects": [
     "./taldawasm/Cargo.toml",
-    "./taldawasm/macros/http-endpoint/Cargo.toml",
-    "./taldawasm/macros/guest/Cargo.toml",
-    "./taldawasm/examples/http_endpoint/Cargo.toml",
+    "./taldawasm/examples/http-endpoint/Cargo.toml",
+    "./taldawasm/examples/mqtt-endpoint/Cargo.toml",
     "./taldaframe/Cargo.toml",
   ]
 }
