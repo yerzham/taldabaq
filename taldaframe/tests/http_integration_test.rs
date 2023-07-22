@@ -2,7 +2,7 @@
 mod tests {
   use anyhow::Result;
   use base64::{engine::general_purpose, Engine as _};
-  use serde_json::{json, Value};
+  use serde_json::json;
 
   #[tokio::test]
   async fn test_http_integration_test() -> Result<()> {
@@ -27,7 +27,7 @@ mod tests {
 
     let response = hc.do_post("/function/echo/execute", &response_first_128_letters).await?;
     response.print().await?;
-    assert_eq!(response.text_body()?, response_first_128_letters);
+    assert_eq!(response.text_body()?, format!("Path: /function/echo/execute\nBody:\n{}", response_first_128_letters));
 
     Ok(())
   }

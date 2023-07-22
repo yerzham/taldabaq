@@ -125,8 +125,7 @@ pub mod __wit {
             // })?;
             (
                 create_http_status_code(self.status_code),
-                self.headers
-                    .map_or(http::HeaderMap::new(), create_http_headers),
+                create_http_headers(self.headers),
                 self.body.ok_or("".to_string()).unwrap(),
             )
                 .into_response()

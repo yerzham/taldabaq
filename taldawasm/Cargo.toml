@@ -22,3 +22,5 @@ http = "0.2"
 [dependencies]
 http-endpoint-macro = { path = "macros/http-endpoint" }
 http-endpoint = { path = "crates/http-endpoint" }
+http = "0.2"
+bytes = "1"

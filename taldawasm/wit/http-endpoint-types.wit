@@ -15,7 +15,7 @@ interface http-endpoint-types {
 
     record response {
       status-code: status-code,
-      headers: option<headers>,
+      headers: headers,
       body: option<body>
     }
 }

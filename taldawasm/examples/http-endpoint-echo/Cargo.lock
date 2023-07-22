@@ -261,6 +261,8 @@ dependencies = [
 name = "taldawasm"
 version = "0.1.0"
 dependencies = [
+ "bytes",
+ "http",
  "http-endpoint",
  "http-endpoint-macro",
 ]

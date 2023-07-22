@@ -1,12 +1,8 @@
-use taldawasm::http::http_endpoint::{Response, Error, Request, handler};
+use taldawasm::http::{http_endpoint, Response, Error, Request};
 
-#[handler]
+#[http_endpoint::handler]
 fn handler(request: Request) -> Result<Response, Error> {
-    Ok(Response {
-        status_code: 200,
-        body: request.body,
-        headers: None
-    })
+    Ok(Response::new(Some("Hello, World!".into())))
 }
 
 #[test]
