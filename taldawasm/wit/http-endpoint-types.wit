@@ -1,4 +1,4 @@
-package taldawit:http
+package taldawasm:http
 
 interface http-endpoint-types {
     use wasi:http/types.{method, error, status-code}

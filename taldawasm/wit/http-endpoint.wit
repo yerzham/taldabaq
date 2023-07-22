@@ -1,4 +1,4 @@
-package taldawit:http
+package taldawasm:http
 
 interface http-endpoint {
     use http-endpoint-types.{request, response, error}

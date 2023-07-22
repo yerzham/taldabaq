@@ -14,13 +14,11 @@ members = [
   "crates/*",
   "macros/*",
 ]
-exclude = [
-  "examples/*"
-]
 
 [workspace.dependencies]
 wit-bindgen = "0.9.0"
+http = "0.2"
 
 [dependencies]
-taldamacros = { path = "macros/guest" }
-wit-bindgen = "0.9.0"
+http-endpoint-macro = { path = "macros/http-endpoint" }
+http-endpoint = { path = "crates/http-endpoint" }

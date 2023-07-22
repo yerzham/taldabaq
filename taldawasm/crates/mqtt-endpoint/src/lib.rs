@@ -1,3 +1,1 @@
-pub mod wit {
-  
-} 
+pub mod wit {}

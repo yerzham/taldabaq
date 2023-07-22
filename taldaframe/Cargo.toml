@@ -21,8 +21,10 @@ tower-http = { version = "0.4.0", features = [
     "trace",
 ] }
 wasmtime = { version = "11.0.0", features = ["component-model"] }
-wit-bindgen = { git = "https://github.com/bytecodealliance/wit-bindgen", version = "0.6.0" }
+http = "0.2"
+http-body = "0.4.5"
+bytes = "1"
+anyhow = "1"
 
 [dev-dependencies]
-anyhow = "1.0.71"
 httpc-test = "0.1.2"

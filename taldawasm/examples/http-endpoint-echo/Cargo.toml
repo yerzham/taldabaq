@@ -1,5 +1,5 @@
 [package]
-name = "http-endpoint-example"
+name = "http-endpoint-echo"
 version = "0.1.0"
 edition = "2021"
 
@@ -12,4 +12,3 @@ crate-type = ['cdylib']
 
 [dependencies]
 taldawasm = { path = "../../" }
-wit-bindgen = "0.9.0"

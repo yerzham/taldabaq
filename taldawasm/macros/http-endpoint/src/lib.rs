@@ -1,70 +1,24 @@
-mod parse_source;
-
 use proc_macro::TokenStream;
-use proc_macro2::{Span, TokenStream as TokenStream2};
+use proc_macro2::TokenStream as TokenStream2;
 use quote;
-use syn::parse::Error;
 
 #[proc_macro_attribute]
-pub fn http_endpoint(attr: TokenStream, item: TokenStream) -> TokenStream {
-    match http_endpoint2(attr.into(), item.into()) {
-        Ok(output) => output,
-        Err(error) => error.into_compile_error(),
-    }
-    .into()
+pub fn http_endpoint(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let func = syn::parse_macro_input!(item as syn::ItemFn);
+    use_for_endpoint_impl(func).into()
 }
 
-fn http_endpoint2(_attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream2> {
-    const HTTP_COMPONENT_WIT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../wit");
-    
-    let call_site = Span::call_site();
-    let mut item: syn::ItemFn = syn::parse(item).unwrap();
-    item.sig.ident = syn::Ident::new("handle_request", item.sig.ident.span());
-    
-    let (resolve, pkg, files) = 
-        parse_source::parse_source(HTTP_COMPONENT_WIT).map_err(|err| 
-            Error::new(call_site, format!("{err:?}")
-        ))?;
-    let world = resolve
-        .select_world(pkg, Some("taldawit:http/endpoint"))
-        .map_err(|e| Error::new(call_site, format!("{e:?}")))?;
-    
-    let mut opts = wit_bindgen_rust::Opts::default();
-    // opts.std_feature = true;
-    // opts.raw_strings = true;
-    opts.macro_export = true;
-    // opts.runtime_path = Some(String::from("wit_bindgen::rt"));
-    // opts.macro_call_prefix = Some(String::from("::taldawasm::"));
-
-    let mut resolved_files = Default::default();
-
-    opts.build().generate(&resolve, world, &mut resolved_files);
-    let (_, src) = resolved_files.iter().next().unwrap();
-    let src = std::str::from_utf8(src).unwrap();
-    let mut contents_wit = src.parse::<TokenStream2>().unwrap();
-
-    for file in files.iter() {
-        contents_wit.extend(
-            format!("const _: &str = include_str!(r#\"{}\"#);\n", file.display())
-                .parse::<TokenStream2>()
-                .unwrap(),
-        );
-    }
+fn use_for_endpoint_impl(mut func: syn::ItemFn) -> TokenStream2 {
+    func.sig.ident = syn::Ident::new("handle_request", func.sig.ident.span());
 
     let contents = quote::quote! {
-        
-        use exports::taldawit::http::http_endpoint::{HttpEndpoint};
-
-        #contents_wit
-
+        use taldawasm::http::http_endpoint::__HttpEndpoint;
         pub struct Endpoint;
-
-        impl HttpEndpoint for Endpoint {
-            #item
+        impl __HttpEndpoint for Endpoint {
+            #func
         }
-
-        export_endpoint!(Endpoint);
+        taldawasm::http::http_endpoint::__export_endpoint!(Endpoint);
     };
-    
-    Ok(TokenStream2::from(contents))
+
+    TokenStream2::from(contents)
 }

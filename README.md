@@ -24,3 +24,10 @@ cargo +nightly watch -q -c -w tests/ -x "test -q http_integration_test -- --noca
 
 cargo build --release --target=wasm32-unknown-unknown
 ```
+
+Build a wasm component
+
+```
+cargo build --target wasm32-unknown-unknown --release
+wasm-tools component new ./target/wasm32-unknown-unknown/release/http_endpoint_example.wasm -o ./target/wasm32-unknown-unknown/release/http_endpoint_component.wasm
+```

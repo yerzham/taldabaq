@@ -1,17 +1,30 @@
-mod http;
+mod http_endpoint;
 
-use std::{sync::{Arc, RwLock}, collections::HashMap, borrow::Cow};
+use std::{
+    borrow::Cow,
+    collections::HashMap,
+    sync::{Arc, RwLock},
+};
 
 use axum::{
-    routing::{get, any},
-    Router, response::{IntoResponse, Response}, extract::{Path, State, DefaultBodyLimit, self}, body::{Bytes, Body}, http::{StatusCode, Request, Method}, BoxError, handler::Handler, middleware::Next, error_handling::HandleErrorLayer,
+    body::{Body, Bytes},
+    error_handling::HandleErrorLayer,
+    extract::{self, DefaultBodyLimit, Path, State},
+    handler::Handler,
+    http::{Request, StatusCode},
+    middleware::Next,
+    response::{IntoResponse, Response},
+    routing::{any, get},
+    BoxError, Router,
 };
-use base64::{Engine as Base64Engine, engine::general_purpose};
-use http::taldawasm::http::http_endpoint_types::Request as TWRequest;
+use base64::{engine::general_purpose, Engine as Base64Engine};
 use serde::Deserialize;
 use tower::ServiceBuilder;
 use tower_http::{compression::CompressionLayer, limit::RequestBodyLimitLayer};
-use wasmtime::{Engine, Store, Config, component::{Component, Linker}};
+use wasmtime::{
+    component::{Component, Linker},
+    Config, Engine, Store,
+};
 
 type SharedState = Arc<RwLock<AppState>>;
 
@@ -50,17 +63,25 @@ async fn get_wasm_function(
     }
 }
 
-async fn set_wasm_function(Path(key): Path<String>, State(state): State<SharedState>, extract::Json(params): extract::Json<SetWasmFunctionParams>) -> impl IntoResponse {
-    let wasm_bytecode = general_purpose::STANDARD_NO_PAD.decode(&mut Bytes::from(params.wasm_bytecode));
+async fn set_wasm_function(
+    Path(key): Path<String>,
+    State(state): State<SharedState>,
+    extract::Json(params): extract::Json<SetWasmFunctionParams>,
+) -> impl IntoResponse {
+    let wasm_bytecode =
+        general_purpose::STANDARD_NO_PAD.decode(&mut Bytes::from(params.wasm_bytecode));
     if let Err(e) = wasm_bytecode {
         println!("wasm_app_set: {:?}", e);
         return (StatusCode::BAD_REQUEST, "Invalid base64".to_string());
     }
     let wasm_bytecode = wasm_bytecode.unwrap();
-    state.write().unwrap().wasm_functions.insert(key, WasmFunction {
-        wasm_bytecode: wasm_bytecode.into(),
-        options: params.options,
-    });
+    state.write().unwrap().wasm_functions.insert(
+        key,
+        WasmFunction {
+            wasm_bytecode: wasm_bytecode.into(),
+            options: params.options,
+        },
+    );
 
     (StatusCode::OK, "OK".to_string())
 }
@@ -68,8 +89,7 @@ async fn set_wasm_function(Path(key): Path<String>, State(state): State<SharedSt
 async fn exec_wasm_function(
     Path(key): Path<String>,
     State(state): State<SharedState>,
-    method: Method,
-    body: String,
+    req: http_endpoint::Request,
 ) -> impl IntoResponse {
     let wasm_functions = &state.read().unwrap().wasm_functions;
 
@@ -82,39 +102,31 @@ async fn exec_wasm_function(
         })?;
         let component = Component::from_binary(&engine, &value.wasm_bytecode).map_err(|e| {
             println!("wasm_app_execute: {:?}", e);
-            StatusCode::BAD_REQUEST
+            StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
         let linker: Linker<()> = Linker::new(&engine);
 
         let mut store = Store::new(&engine, ());
-        let (bindings, _instance) = http::Endpoint::instantiate(&mut store, &component, &linker).map_err(|e| {
-            println!("wasm_app_execute: {:?}", e);
-            StatusCode::BAD_REQUEST
-        })?;
-        let result = bindings.taldawasm_http_http_endpoint().call_handle_request(&mut store, &TWRequest{
-            path: "/".to_string(),
-            method: method.into(),
-            body: Some(body.as_bytes().to_vec()),
-            headers: vec![]
-        }).map_err(|e| {
-            println!("wasm_app_execute: {:?}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+        let (bindings, _instance) =
+            http_endpoint::Endpoint::instantiate(&mut store, &component, &linker).map_err(|e| {
+                println!("wasm_app_execute: {:?}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
+        let result = bindings
+            .taldawasm_http_http_endpoint()
+            .call_handle_request(&mut store, &req)
+            .map_err(|e| {
+                println!("wasm_app_execute: {:?}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
 
         let response = result.map_err(|e| {
             println!("wasm_app_execute: {:?}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
-        let response_str = response.body.map_or(Ok("".to_string()), |v| {
-            String::from_utf8(v).map_err(|e| {
-                println!("wasm_app_execute: {:?}", e);
-                StatusCode::INTERNAL_SERVER_ERROR
-            })
-        })?;
-
-        Ok(response_str)
+        Ok(response)
     } else {
         Err(StatusCode::NOT_FOUND)
     }
@@ -125,29 +137,27 @@ async fn main() {
     let shared_state = SharedState::default();
 
     // build our application with a single route
-    let app = Router::new().route(
-        "/function/:key", 
-        get(get_wasm_function.layer(CompressionLayer::new()))
-        .post_service(
-            set_wasm_function
-                .layer((
-                    DefaultBodyLimit::disable(), 
-                    RequestBodyLimitLayer::new(1024 * 1024 * 10),
-                ))
-                .with_state(Arc::clone(&shared_state)),
-        ),
-    ).route(
-        "/function/:key/execute",
-        any(exec_wasm_function)
-    )
-    .layer(
-        ServiceBuilder::new()
-            .layer(HandleErrorLayer::new(handle_error))
-            .load_shed()
-            .concurrency_limit(1024)
-            .timeout(std::time::Duration::from_secs(10))
-    )
-    .with_state(Arc::clone(&shared_state));
+    let app = Router::new()
+        .route(
+            "/function/:key",
+            get(get_wasm_function.layer(CompressionLayer::new())).post_service(
+                set_wasm_function
+                    .layer((
+                        DefaultBodyLimit::disable(),
+                        RequestBodyLimitLayer::new(1024 * 1024 * 10),
+                    ))
+                    .with_state(Arc::clone(&shared_state)),
+            ),
+        )
+        .route("/function/:key/execute", any(exec_wasm_function))
+        .layer(
+            ServiceBuilder::new()
+                .layer(HandleErrorLayer::new(handle_error))
+                .load_shed()
+                .concurrency_limit(1024)
+                .timeout(std::time::Duration::from_secs(10)),
+        )
+        .with_state(Arc::clone(&shared_state));
     // .layer(middleware::from_fn(print_request_response));
 
     // run it with hyper on localhost:3000

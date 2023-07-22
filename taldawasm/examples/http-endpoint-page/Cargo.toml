@@ -1,5 +1,5 @@
 [package]
-name = "mqtt-endpoint-example"
+name = "http-endpoint-page"
 version = "0.1.0"
 edition = "2021"
 

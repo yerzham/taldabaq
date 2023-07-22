@@ -6,3 +6,6 @@ edition = { workspace = true }
 
 [dependencies]
 wit-bindgen = { workspace = true }
+http = { workspace = true }
+bytes = "1"
+anyhow = "1"

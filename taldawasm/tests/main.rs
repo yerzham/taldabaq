@@ -1,6 +1,4 @@
-
-use taldawasm::http::http_endpoint::handler;
-use taldawit::http::http_endpoint_types::{Request, Response, Error}; // FIXME: ghost module
+use taldawasm::http::http_endpoint::{Response, Error, Request, handler};
 
 #[handler]
 fn handler(request: Request) -> Result<Response, Error> {
