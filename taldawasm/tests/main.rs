@@ -1,12 +1,12 @@
 
-use http_wrapper::http_endpoint;
-use structs::{Request, Response};
+use taldawasm::http::http_endpoint;
 
-#[http_endpoint]
-fn handler(_req: Request) -> Result<Response, ()> {
+#[http_endpoint::handler]
+fn handler(_request: Request) -> Result<Response, Error> {
     Ok(Response {
-        status: 200,
-        body: "Hello, world!".to_string(),
+        status_code: 200,
+        body: None,
+        headers: None
     })
 }
 

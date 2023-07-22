@@ -1,4 +1,21 @@
 # taldabaq
+
+## Requirements
+
+Install `wit-deps-cli` to manage WIT dependencies
+
+```
+cargo install wit-deps-cli
+```
+
+Install `wasm-tools`
+
+```
+cargo install wasm-tools
+```
+
+## Build
+
 Deploy and manage IoT applications
 
 ```

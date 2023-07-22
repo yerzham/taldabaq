@@ -1,14 +1,17 @@
+mod http;
+
 use std::{sync::{Arc, RwLock}, collections::HashMap, borrow::Cow};
 
 use axum::{
-    routing::get,
-    Router, response::{IntoResponse, Response}, extract::{Path, State, DefaultBodyLimit, Query, self}, body::{Bytes, Body}, http::{StatusCode, Request}, BoxError, handler::Handler, middleware::{Next, self}, error_handling::HandleErrorLayer,
+    routing::{get, any},
+    Router, response::{IntoResponse, Response}, extract::{Path, State, DefaultBodyLimit, self}, body::{Bytes, Body}, http::{StatusCode, Request, Method}, BoxError, handler::Handler, middleware::Next, error_handling::HandleErrorLayer,
 };
 use base64::{Engine as Base64Engine, engine::general_purpose};
+use http::taldawasm::http::http_endpoint_types::Request as TWRequest;
 use serde::Deserialize;
 use tower::ServiceBuilder;
-use tower_http::{compression::CompressionLayer, limit::{RequestBodyLimitLayer}};
-use wasmtime::{Engine, Module, Store, Instance, Linker};
+use tower_http::{compression::CompressionLayer, limit::RequestBodyLimitLayer};
+use wasmtime::{Engine, Store, Config, component::{Component, Linker}};
 
 type SharedState = Arc<RwLock<AppState>>;
 
@@ -65,75 +68,53 @@ async fn set_wasm_function(Path(key): Path<String>, State(state): State<SharedSt
 async fn exec_wasm_function(
     Path(key): Path<String>,
     State(state): State<SharedState>,
+    method: Method,
+    body: String,
 ) -> impl IntoResponse {
     let wasm_functions = &state.read().unwrap().wasm_functions;
 
     if let Some(value) = wasm_functions.get(&key) {
-        let engine = Engine::default();
-        let module = Module::new(&engine, &value.wasm_bytecode);
-        if let Err(e) = module {
+        let mut config = Config::new();
+        config.wasm_component_model(true);
+        let engine = Engine::new(&config).map_err(|e| {
             println!("wasm_app_execute: {:?}", e);
-            return Err(StatusCode::BAD_REQUEST);
-        }
-        let module = module.unwrap();
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+        let component = Component::from_binary(&engine, &value.wasm_bytecode).map_err(|e| {
+            println!("wasm_app_execute: {:?}", e);
+            StatusCode::BAD_REQUEST
+        })?;
 
-        let mut linker: Linker<()> = Linker::new(&engine);
-        if let Err(e) = linker.func_wrap("http", "body", || 0) {
-            println!("wasm_app_execute: {:?}", e);
-            return Err(StatusCode::BAD_REQUEST);
-        }
-        if let Err(e) = linker.func_wrap("http", "body_len", || 0) {
-            println!("wasm_app_execute: {:?}", e);
-            return Err(StatusCode::BAD_REQUEST);
-        }
-        if let Err(e) = linker.func_wrap("http", "method", || 0) {
-            println!("wasm_app_execute: {:?}", e);
-            return Err(StatusCode::BAD_REQUEST);
-        }
-        if let Err(e) = linker.func_wrap("http", "method_len", || 0) {
-            println!("wasm_app_execute: {:?}", e);
-            return Err(StatusCode::BAD_REQUEST);
-        }
-        if let Err(e) = linker.func_wrap("http", "path", || 0) {
-            println!("wasm_app_execute: {:?}", e);
-            return Err(StatusCode::BAD_REQUEST);
-        }
-        if let Err(e) = linker.func_wrap("http", "path_len", || 0) {
-            println!("wasm_app_execute: {:?}", e);
-            return Err(StatusCode::BAD_REQUEST);
-        }
-
+        let linker: Linker<()> = Linker::new(&engine);
 
         let mut store = Store::new(&engine, ());
-        let instance = linker.instantiate(&mut store, &module);
-        if let Err(e) = instance {
+        let (bindings, _instance) = http::Endpoint::instantiate(&mut store, &component, &linker).map_err(|e| {
             println!("wasm_app_execute: {:?}", e);
-            return Err(StatusCode::BAD_REQUEST);
-        }
-        let instance = instance.unwrap();
-
-        let memory = instance
-            .get_memory(&mut store, "memory")
-            .ok_or(StatusCode::BAD_REQUEST)?;
-        let size = instance.get_typed_func::<(), u32>(&mut store, "size").or(Err(StatusCode::BAD_REQUEST))?;
-        let load_fn = instance.get_typed_func::<u32, u32>(&mut store, "load").or(Err(StatusCode::BAD_REQUEST))?;
-        let store_fn = instance.get_typed_func::<(u32, u32), ()>(&mut store, "store").or(Err(StatusCode::BAD_REQUEST))?;
-
-        let run = instance.get_typed_func::<(), u32>(&mut store, "run");
-        if let Err(e) = run {
+            StatusCode::BAD_REQUEST
+        })?;
+        let result = bindings.taldawasm_http_http_endpoint().call_handle_request(&mut store, &TWRequest{
+            path: "/".to_string(),
+            method: method.into(),
+            body: Some(body.as_bytes().to_vec()),
+            headers: vec![]
+        }).map_err(|e| {
             println!("wasm_app_execute: {:?}", e);
-            return Err(StatusCode::BAD_REQUEST);
-        }
-        let run = run.unwrap();
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
-        let result = run.call(&mut store, ());
-        if let Err(e) = result {
+        let response = result.map_err(|e| {
             println!("wasm_app_execute: {:?}", e);
-            return Err(StatusCode::INTERNAL_SERVER_ERROR);
-        }
-        let result = result.unwrap();
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
-        Ok(result.to_string())
+        let response_str = response.body.map_or(Ok("".to_string()), |v| {
+            String::from_utf8(v).map_err(|e| {
+                println!("wasm_app_execute: {:?}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })
+        })?;
+
+        Ok(response_str)
     } else {
         Err(StatusCode::NOT_FOUND)
     }
@@ -156,8 +137,8 @@ async fn main() {
                 .with_state(Arc::clone(&shared_state)),
         ),
     ).route(
-        "/function/:key/execute", 
-        get(exec_wasm_function)
+        "/function/:key/execute",
+        any(exec_wasm_function)
     )
     .layer(
         ServiceBuilder::new()

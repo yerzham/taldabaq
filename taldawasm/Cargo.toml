@@ -5,7 +5,10 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies]
-http_wrapper = { path = "./http_wrapper" }
-structs = { path = "./structs" }
+[lib]
+name = "taldawasm"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[dependencies]
+taldamacros = { path = "./macros/guest" }
+wit-bindgen = "0.9.0"
