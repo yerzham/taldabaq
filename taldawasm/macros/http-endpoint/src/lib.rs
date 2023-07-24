@@ -13,17 +13,21 @@ fn use_for_endpoint_impl(func: syn::ItemFn) -> TokenStream2 {
     let name = func.sig.ident.clone();
 
     let contents = quote::quote! {
-        use taldawasm::http::http_endpoint::__HttpEndpoint;
-        pub struct HttpEndpointHandler;
+        pub struct HttpEndpoint;
         #func
-        impl __HttpEndpoint for HttpEndpointHandler {
-            fn handle_request(req: taldawasm::http::http_endpoint::__types::Request) -> Result<taldawasm::http::http_endpoint::__types::Response, taldawasm::http::http_endpoint::__types::Error> {
+        impl taldawasm::http::endpoint::Endpoint for HttpEndpoint {
+            fn handle_request(req: taldawasm::types::Request) -> Result<taldawasm::types::Response, taldawasm::types::Error> {
                 let req: taldawasm::http::Request = req.try_into()?;
                 let res = #name(req)?;
                 res.try_into()
             }
         }
-        taldawasm::http::http_endpoint::__export_endpoint!(HttpEndpointHandler);
+        impl taldawasm::mqtt::endpoint::Endpoint for HttpEndpoint {
+            fn handle_message(message: String) -> Result<String, String> {
+                unimplemented!("This component does not implement an mqtt endpoint interface")
+            }
+        }
+        taldawasm::export_endpoint!(HttpEndpoint);
     };
 
     TokenStream2::from(contents)

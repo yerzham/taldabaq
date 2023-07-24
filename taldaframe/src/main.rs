@@ -97,32 +97,37 @@ async fn exec_wasm_function(
         let mut config = Config::new();
         config.wasm_component_model(true);
         let engine = Engine::new(&config).map_err(|e| {
-            println!("wasm_app_execute: {:?}", e);
+            println!("wasm_app_execute (prepare engine): {:?}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
         let component = Component::from_binary(&engine, &value.wasm_bytecode).map_err(|e| {
-            println!("wasm_app_execute: {:?}", e);
+            println!("wasm_app_execute (prepare component): {:?}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
-        let linker: Linker<()> = Linker::new(&engine);
+        let mut linker: Linker<http_endpoint::HttpEndpointHost> = Linker::new(&engine);
+        http_endpoint::HttpEndpointComponent::add_to_linker(&mut linker, |state: &mut http_endpoint::HttpEndpointHost| state).map_err(|e| {
+            println!("wasm_app_execute (prepare bindings): {:?}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
-        let mut store = Store::new(&engine, ());
+
+        let mut store = Store::<http_endpoint::HttpEndpointHost>::new(&engine, http_endpoint::HttpEndpointHost {});
         let (bindings, _instance) =
-            http_endpoint::Endpoint::instantiate(&mut store, &component, &linker).map_err(|e| {
-                println!("wasm_app_execute: {:?}", e);
+            http_endpoint::HttpEndpointComponent::instantiate(&mut store, &component, &linker).map_err(|e| {
+                println!("wasm_app_execute  (init component): {:?}", e);
                 StatusCode::INTERNAL_SERVER_ERROR
             })?;
         let result = bindings
-            .taldawasm_http_http_endpoint()
+            .taldawasm_main_http_endpoint()
             .call_handle_request(&mut store, &req)
             .map_err(|e| {
-                println!("wasm_app_execute: {:?}", e);
+                println!("wasm_app_execute (call component): {:?}", e);
                 StatusCode::INTERNAL_SERVER_ERROR
             })?;
 
         let response = result.map_err(|e| {
-            println!("wasm_app_execute: {:?}", e);
+            println!("wasm_app_execute (component result): {:?}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 

@@ -1,0 +1,4 @@
+interface http-outgoing {
+    use http-types.{request, response, error}
+    fetch: func(request: request) -> result<response, error>
+}

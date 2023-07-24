@@ -1,0 +1,8 @@
+interface mqtt-endpoint {
+    handle-message: func(message: string) -> result<string, string>
+}
+
+world mqtt-endpoint-component {
+    import http-outgoing
+    export mqtt-endpoint
+}

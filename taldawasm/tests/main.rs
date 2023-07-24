@@ -1,7 +1,7 @@
-use taldawasm::http::{http_endpoint, Response, Error, Request};
+use taldawasm::http::{Response, Error, Request};
 
-#[http_endpoint::handler]
-fn handler(request: Request) -> Result<Response, Error> {
+#[taldawasm::http::endpoint::handler]
+fn handler(_request: Request) -> Result<Response, Error> {
     Ok(Response::new(Some("Hello, World!".into())))
 }
 

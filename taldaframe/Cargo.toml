@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 axum = "0.6.18"
+axum-macros = "0.3.8"
 base64 = "0.21.0"
 serde = { version = "1.0.162", features = ["derive"] }
 serde_json = "1.0.96"
@@ -20,6 +21,7 @@ tower-http = { version = "0.4.0", features = [
     "limit",
     "trace",
 ] }
+reqwest = { version = "0.11", features = ["blocking", "json"] }
 wasmtime = { version = "11.0.0", features = ["component-model"] }
 http = "0.2"
 http-body = "0.4.5"

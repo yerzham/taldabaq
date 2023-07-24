@@ -1,8 +1,10 @@
 pub mod __wit {
+    use std::str::FromStr;
+
     use axum::{
         async_trait,
         extract::{rejection::BytesRejection, FromRequest},
-        response::{IntoResponse, Response},
+        response::{IntoResponse},
         BoxError,
     };
     use http::header::ToStrError;
@@ -10,11 +12,15 @@ pub mod __wit {
     use wasmtime::component::*;
 
     bindgen!({
-      path: "../taldawasm/wit",
-      world: "taldawasm:http/endpoint"
+        path: "../taldawasm/wit",
+        world: "taldawasm:main/http-endpoint-component",
+        with: {
+            "http-endpoint": crate::interfaces::taldawasm::main::http_endpoint,
+            "http-types": crate::interfaces::taldawasm::main::http_types,
+        },
     });
 
-    use self::taldawasm::http::http_endpoint_types as taldawasm_http_endpoint;
+    use self::taldawasm::main::http_types as taldawasm_http_endpoint;
 
     impl From<&http::Method> for taldawasm_http_endpoint::Method {
         fn from(value: &http::Method) -> Self {
@@ -31,6 +37,26 @@ pub mod __wit {
                 &Method::PATCH => TWMethod::Patch,
                 &Method::TRACE => TWMethod::Trace,
                 _ => taldawasm_http_endpoint::Method::Other(value.to_string()),
+            }
+        }
+    }
+
+    impl TryFrom<taldawasm_http_endpoint::Method> for http::Method {
+        type Error = http::method::InvalidMethod;
+        fn try_from(value: taldawasm_http_endpoint::Method) -> Result<http::Method, http::method::InvalidMethod> {
+            use http::Method;
+            use taldawasm_http_endpoint::Method as TWMethod;
+            match value {
+                TWMethod::Get => Ok(Method::GET),
+                TWMethod::Post => Ok(Method::POST),
+                TWMethod::Put => Ok(Method::PUT),
+                TWMethod::Delete => Ok(Method::DELETE),
+                TWMethod::Head => Ok(Method::HEAD),
+                TWMethod::Options => Ok(Method::OPTIONS),
+                TWMethod::Connect => Ok(Method::CONNECT),
+                TWMethod::Patch => Ok(Method::PATCH),
+                TWMethod::Trace => Ok(Method::TRACE),
+                TWMethod::Other(value) => Method::from_str(value.as_str()),
             }
         }
     }
@@ -114,8 +140,18 @@ pub mod __wit {
         http_headers
     }
 
+    fn create_taldawasm_http_endpoint_headers(headers: http::HeaderMap) -> taldawasm_http_endpoint::Headers {
+        let mut tw_headers: taldawasm_http_endpoint::Headers = vec![];
+        headers.iter().for_each(|header| {
+            let name = header.0.to_string();
+            let value = header.1.to_str().unwrap();
+            tw_headers.push((name, value.to_string()))
+        });
+        tw_headers
+    }
+
     impl IntoResponse for taldawasm_http_endpoint::Response {
-        fn into_response(self) -> Response {
+        fn into_response(self) -> axum::response::Response {
             // its often easiest to implement `IntoResponse` by calling other implementations
             // let body = self.body.map_or(Ok("".to_string()), |v| {
             //     String::from_utf8(v).map_err(|e| {
@@ -126,12 +162,76 @@ pub mod __wit {
             (
                 create_http_status_code(self.status_code),
                 create_http_headers(self.headers),
-                self.body.ok_or("".to_string()).unwrap(),
+                self.body.or(Some(vec![])).unwrap(),
             )
                 .into_response()
         }
     }
+
+    use taldawasm_http_endpoint::*;
+
+    impl taldawasm::main::http_outgoing::Host for crate::http_endpoint::HttpEndpointHost {
+        fn fetch(&mut self, req: Request) -> wasmtime::Result<Result<Response, Error>> {
+            Ok(Ok(Response {
+                status_code: 200,
+                headers: vec![
+                    ("Content-Type".to_string(), "text/plain".to_string()),
+                    ("X-Test".to_string(), "test".to_string()),
+                ],
+                body: Some("Outbound request attempt!".to_string().into()),
+            }))
+            // TODO: Support outbound requests from WASM on an async runtime
+            // let method = TryInto::<http::Method>::try_into(req.method).map_err(|e| {
+            //     Error::UnexpectedError(format!(
+            //         "[taldawasm:http-endpoint-host]: Failed to convert method. Caused by: {}",
+            //         e
+            //     ))
+            // });
+            // let path = req.path;
+            // let headers = create_http_headers(req.headers);
+            // let body = req.body.map_or(vec![], |b| b.into());
+
+            // match method {
+            //     Ok(method) => {
+            //         let client = reqwest::blocking::Client::new();
+            //         let req = client.request(method, path).headers(headers).body(body);
+            //         let res = req.send().map_err(|e| {
+            //             Error::UnexpectedError(format!(
+            //                 "[taldawasm:http-endpoint-host]: Failed to send a request. Caused by: {}",
+            //                 e
+            //             ))
+            //         })?;
+            //         let status_code = res.status().as_u16();
+            //         let headers = res.headers().clone();
+            //         let body = res.bytes().map_err(|e| {
+            //             Error::UnexpectedError(format!(
+            //                 "[taldawasm:http-endpoint-host]: Failed to read a response body. Caused by: {}",
+            //                 e
+            //             ))
+            //         })?;
+            //         Ok(Ok(Response {
+            //             status_code,
+            //             headers: create_taldawasm_http_endpoint_headers(headers),
+            //             body: Some(body.into()),
+            //         }))
+            //     }
+            //     Err(e) => Ok(Err(e)),
+            // }
+        }
+    }
+    impl taldawasm::main::http_types::Host for crate::http_endpoint::HttpEndpointHost {}
 }
 
-pub use __wit::taldawasm::http::http_endpoint_types::*;
-pub use __wit::Endpoint;
+pub struct HttpEndpointHost;
+
+pub mod interfaces {
+    wasmtime::component::bindgen!({
+        path: "../taldawasm/wit",
+        interfaces: "
+            import taldawasm:main/http-outgoing
+        ",
+    });
+}
+
+pub use __wit::taldawasm::main::http_types::*;
+pub use __wit::HttpEndpointComponent;

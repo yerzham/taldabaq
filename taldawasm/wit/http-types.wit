@@ -1,0 +1,40 @@
+interface http-types {
+    type headers = list<tuple<string, string>>
+    type body = list<u8>
+    type path = string
+
+    type status-code = u16
+
+    variant error {
+        invalid-url(string),
+        timeout-error(string),
+        protocol-error(string),
+        unexpected-error(string)
+    }
+
+    variant method {
+        get,
+        head,
+        post,
+        put,
+        delete,
+        connect,
+        options,
+        trace,
+        patch,
+        other(string)
+    }
+
+    record request {
+        path: path,
+        method: method,
+        headers: headers,
+        body: option<body>
+    }
+
+    record response {
+        status-code: status-code,
+        headers: headers,
+        body: option<body>
+    }
+}

@@ -1,11 +1,9 @@
-package taldawasm:http
-
 interface http-endpoint {
-    use http-endpoint-types.{request, response, error}
+    use http-types.{request, response, error}
     handle-request: func(request: request) -> result<response, error>
 }
 
-world endpoint {
-  import http-endpoint-types
-  export http-endpoint
+world http-endpoint-component {
+    import http-outgoing
+    export http-endpoint
 }

@@ -1,19 +1,25 @@
 use std::ops::Deref;
 
-use taldawasm::http::{http_endpoint, Request, Response, Error, Bytes, response::Builder};
+use taldawasm::http::{response::Builder, Error, Request, Response};
 
-#[http_endpoint::handler]
+#[taldawasm::http::endpoint::handler]
 fn dfdsaf(request: Request) -> Result<Response, Error> {
-    let body: &Option<Bytes> = request.body();
-    let body = body.as_ref().map_or(Ok(""), |x| std::str::from_utf8(x.deref()));
-    let path = request.uri().path_and_query().map(|x| x.as_str()).unwrap_or("");
+    let body = request.body()
+        .as_ref()
+        .map_or(Ok(""), |x| std::str::from_utf8(x.deref()));
+    let path = request
+        .uri()
+        .path_and_query()
+        .map(|x| x.as_str())
+        .unwrap_or("");
     let mut res = match body {
         Ok(x) => Response::new(Some(format!("Path: {}\nBody:\n{}", path, x).into())),
         Err(_) => Builder::new()
             .status(400)
             .body(Some("Failed to parse the request body".into()))
-            .unwrap()
+            .unwrap(),
     };
-    res.headers_mut().insert("Content-Type", "text/plain".parse().unwrap());
+    res.headers_mut()
+        .insert("Content-Type", "text/plain".parse().unwrap());
     Ok(res)
 }

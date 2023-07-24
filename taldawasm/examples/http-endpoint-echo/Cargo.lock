@@ -74,16 +74,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "http-endpoint"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bytes",
- "http",
- "wit-bindgen",
-]
-
-[[package]]
 name = "http-endpoint-echo"
 version = "0.1.0"
 dependencies = [
@@ -263,8 +253,8 @@ version = "0.1.0"
 dependencies = [
  "bytes",
  "http",
- "http-endpoint",
  "http-endpoint-macro",
+ "wit-bindgen",
 ]
 
 [[package]]

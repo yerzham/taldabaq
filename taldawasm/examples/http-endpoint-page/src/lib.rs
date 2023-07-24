@@ -1,12 +1,12 @@
 use rust_embed_for_web::{EmbedableFile, RustEmbed};
-use taldawasm::http::{http_endpoint, response::Builder, Error, Method, Request, Response};
+use taldawasm::http::{response::Builder, Error, Method, Request, Response};
 
 #[derive(RustEmbed)]
 #[folder = "public/"]
 #[gzip = true]
 struct Asset;
 
-#[http_endpoint::handler]
+#[taldawasm::http::endpoint::handler]
 fn handler(request: Request) -> Result<Response, Error> {
     match request.method() {
         &Method::GET => {

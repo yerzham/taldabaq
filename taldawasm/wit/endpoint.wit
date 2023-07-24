@@ -1,0 +1,7 @@
+package taldawasm:main
+
+world endpoint {
+    import http-outgoing
+    export http-endpoint
+    export mqtt-endpoint
+}

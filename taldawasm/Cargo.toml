@@ -11,7 +11,7 @@ edition = "2021"
 
 [workspace]
 members = [
-  "crates/*",
+  # "crates/*",
   "macros/*",
 ]
 
@@ -21,6 +21,6 @@ http = "0.2"
 
 [dependencies]
 http-endpoint-macro = { path = "macros/http-endpoint" }
-http-endpoint = { path = "crates/http-endpoint" }
+wit-bindgen = "0.9.0"
 http = "0.2"
 bytes = "1"

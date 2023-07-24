@@ -50,4 +50,23 @@ mod tests {
 
     Ok(())
   }
+
+  #[tokio::test]
+  async fn test_http_endpoint_proxy_upload_test() -> Result<()> {
+    let hc = httpc_test::new_client("http://localhost:3000")?;
+    let wasm_bytecode = include_bytes!("wasm_test_apps/http_endpoint_proxy_component.wasm");
+    let wasm_bytecode = general_purpose::STANDARD_NO_PAD.encode(wasm_bytecode);
+
+    let response = hc.do_post("/function/proxy", json!({
+      "wasm_bytecode": wasm_bytecode,
+      "options": {
+        "wasi": false
+      }
+    })).await?;
+
+    response.print().await?;
+    assert_eq!(response.text_body()?, format!("OK"));
+
+    Ok(())
+  }
 }
