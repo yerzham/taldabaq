@@ -1,2 +1,4 @@
 target
 deps
+node_modules
+*.tsbuildinfo

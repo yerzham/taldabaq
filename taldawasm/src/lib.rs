@@ -128,9 +128,7 @@ impl TryFrom<types::Request> for http::Request {
 impl TryFrom<http::Request> for types::Request {
     type Error = types::Error;
     fn try_from(req: http::Request) -> Result<Self, Self::Error> {
-        let path = req.uri().path_and_query().ok_or(types::Error::UnexpectedError(
-            "[taldawasm:http-endpoint-macro]: Failed to get path from request".to_string(),
-        ))?;
+        let path = req.uri();
         let method = req.method();
         let headers = req.headers();
         let body = req.body().as_ref().map(|b| b.deref());

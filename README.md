@@ -25,6 +25,12 @@ cargo +nightly watch -q -c -w tests/ -x "test -q http_integration_test -- --noca
 cargo build --release --target=wasm32-unknown-unknown
 ```
 
+On JavaScript Demo
+
+```
+jco transpile http_endpoint_proxy_component.wasm -o wasm --map taldawasm:main/http-outgoing=../target/fetch.js
+```
+
 Build a wasm component
 
 ```
