@@ -1,6 +1,6 @@
 # taldabaq
 
-## Requirements
+## Pre-requisites
 
 Install `wit-deps-cli` to manage WIT dependencies
 
@@ -13,6 +13,13 @@ Install `wasm-tools`
 ```
 cargo install wasm-tools
 ```
+
+Install JavaScript Wasm Component Tools
+```
+npm install -g @bytecodealliance/jco
+```
+
+Use rust nightly toolchain
 
 ## Build
 
