@@ -16,19 +16,18 @@ cargo install wasm-tools
 
 ## Build
 
-Deploy and manage IoT applications
+Rust Host Demo
 
 ```
 cargo +nightly watch -q -c -w src/ -x run
-cargo +nightly watch -q -c -w tests/ -x "test -q http_integration_test -- --nocapture"
-
-cargo build --release --target=wasm32-unknown-unknown
+cargo +nightly watch -q -c -w tests/ -x "test -- --nocapture"
 ```
 
-On JavaScript Demo
+JavaScript Host Demo
 
 ```
-jco transpile http_endpoint_proxy_component.wasm -o wasm --map taldawasm:main/http-outgoing=../target/fetch.js
+jco transpile http_endpoint_{name}_component.wasm -o wasm --map taldawasm:main/http-outgoing=../target/fetch.js
+npm run start
 ```
 
 Build a wasm component
